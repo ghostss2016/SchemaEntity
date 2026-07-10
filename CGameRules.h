@@ -33,6 +33,8 @@ public:
 	SCHEMA_FIELD(int, m_nEndMatchMapVoteWinner);
 	SCHEMA_FIELD(int, m_iRoundTime);
 	SCHEMA_FIELD(bool, m_bWarmupPeriod);
+	SCHEMA_FIELD(GameTime_t, m_fWarmupPeriodEnd);  // For warmup timer
+	SCHEMA_FIELD(bool, m_bFreezePeriod);           // For freeze time
 	SCHEMA_FIELD(GamePhase, m_gamePhase);
 	SCHEMA_FIELD(bool, m_bGameRestart);
 	SCHEMA_FIELD(bool, m_bBombPlanted);

@@ -14,8 +14,9 @@ class CEnvSky : public CBaseModelEntity
 public:
 	DECLARE_SCHEMA_CLASS(CEnvSky)
 
-	SCHEMA_FIELD(int, m_hSkyMaterial)
-	SCHEMA_FIELD(int, m_hSkyMaterialLightingOnly)
+	SCHEMA_FIELD(intptr_t, m_hSkyMaterial)
+	SCHEMA_FIELD(intptr_t, m_hSkyMaterialLightingOnly)
 	SCHEMA_FIELD(Color, m_vTintColor)
 	SCHEMA_FIELD(float32, m_flBrightnessScale)
+	SCHEMA_FIELD_POINTER(char, m_iszPrivateVScripts)
 };

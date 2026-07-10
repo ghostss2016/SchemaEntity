@@ -16,6 +16,7 @@ public:
 	SCHEMA_FIELD(CHandle<CBasePlayerController>, m_hController)
 	SCHEMA_FIELD(uint32, m_iHideHUD)
 	SCHEMA_FIELD(bool, m_fInitHUD)
+	SCHEMA_FIELD(QAngle, v_angle)  // The actual view angle being rendered (follows mouse movement)
 
     void CommitSuicide(bool bExplode, bool bForce)
 	{

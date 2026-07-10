@@ -4,6 +4,7 @@
 #include "CBasePlayerPawn.h"
 #include "services.h"
 #include "CCSWeaponBase.h"
+#include "CCSPlayer_AimPunchServices.h"
 
 enum CSPlayerState
 {
@@ -41,7 +42,7 @@ class CCSPlayerPawnBase : public CBasePlayerPawn
 {
 public:
 	DECLARE_SCHEMA_CLASS(CCSPlayerPawnBase);
-	
+
 	SCHEMA_FIELD(CSPlayerState, m_iPlayerState)
 	SCHEMA_FIELD(CHandle<CCSPlayerController>, m_hOriginalController)
 	SCHEMA_FIELD(int32_t, m_iProgressBarDuration);
@@ -52,7 +53,9 @@ public:
 	SCHEMA_FIELD(GameTime_t, m_blindStartTime)
 	SCHEMA_FIELD(GameTime_t, m_fImmuneToGunGameDamageTime)
 	SCHEMA_FIELD(bool, m_bGunGameImmunity)
-	
+	// NOTE: m_iIDEntIndex REMOVED - field is client-side only (doesn't exist in server schema)
+	// SCHEMA_FIELD(CEntityIndex, m_iIDEntIndex)  // Entity in crosshair (for triggerbot)
+
 	CCSPlayerController *GetOriginalController()
 	{
 		return m_hOriginalController().Get();
@@ -60,7 +63,7 @@ public:
 
 	bool IsBot()
 	{
-		return m_fFlags() & FL_PAWN_FAKECLIENT;
+		return m_fFlags() & FL_FAKECLIENT;
 	}
 };
 
@@ -79,11 +82,22 @@ public:
 	SCHEMA_FIELD(GameTime_t, m_flHealthShotBoostExpirationTime);
 	SCHEMA_FIELD(int32, m_ArmorValue);
 	SCHEMA_FIELD(bool, m_bInBuyZone);
+	SCHEMA_FIELD(bool, m_bInBombZone);
 	SCHEMA_FIELD(EntitySpottedState_t, m_entitySpottedState)
-	SCHEMA_FIELD(int, m_aimPunchTickBase)
-	SCHEMA_FIELD(float, m_aimPunchTickFraction)
-	SCHEMA_FIELD(QAngle, m_aimPunchAngle)
-	SCHEMA_FIELD(QAngle, m_aimPunchAngleVel)
+	// REMOVED 2026-05-03: m_aimPunchTickBase / m_aimPunchTickFraction /
+	// m_aimPunchAngle / m_aimPunchAngleVel are NOT on CCSPlayerPawn in the
+	// current CS2 schema. Real fields live on `CCSPlayer_AimPunchServices`
+	// (verified via strings on libserver.so:
+	//   N26CCSPlayer_AimPunchServices33NetworkVar_m_predictableBaseAngleEE
+	// etc.). Stale SCHEMA_FIELD entries here resolved to offset 0 and
+	// landed writes on the pawn's vtable pointer → engine SIGSEGV in
+	// transmit-pass (libserver+0x177dfd8 / 0xb08).
+	// New access path: `EngineSchema::FieldPtr<>` keyed by logical names
+	// from `addons/configs/jrandomskills/engine_schema.json`.
+	SCHEMA_FIELD(bool, m_bIsScoped)
+	SCHEMA_FIELD(bool, m_bIsDefusing)
+	SCHEMA_FIELD(CCSPlayer_AimPunchServices*, m_pAimPunchServices)
+	SCHEMA_FIELD(CCSPlayer_DamageReactServices*, m_pDamageReactServices)
 };
 
 class CCSGO_TeamPreviewCharacterPosition: public CBaseEntity

@@ -18,6 +18,13 @@ class CBaseCSGrenadeProjectile : public CBaseGrenade
 public:
 	DECLARE_SCHEMA_CLASS(CBaseCSGrenadeProjectile);
 	SCHEMA_FIELD(int32, m_nTicksAtZeroVelocity);
+	SCHEMA_FIELD(int32, m_nBounces);
+};
+
+class CDecoyProjectile : public CBaseCSGrenadeProjectile
+{
+public:
+	DECLARE_SCHEMA_CLASS(CDecoyProjectile);
 };
 
 class CSmokeGrenadeProjectile : public CBaseCSGrenadeProjectile
@@ -33,4 +40,17 @@ class CHEGrenadeProjectile : public CBaseCSGrenadeProjectile
 {
 public:
 	DECLARE_SCHEMA_CLASS(CHEGrenadeProjectile);
+};
+
+class CFlashbangProjectile : public CBaseCSGrenadeProjectile
+{
+public:
+	DECLARE_SCHEMA_CLASS(CFlashbangProjectile);
+};
+
+class CMolotovProjectile : public CBaseCSGrenadeProjectile
+{
+public:
+	DECLARE_SCHEMA_CLASS(CMolotovProjectile);
+	SCHEMA_FIELD(bool, m_bIsIncGrenade);
 };

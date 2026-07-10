@@ -48,4 +48,5 @@ public:
 	DECLARE_SCHEMA_CLASS(CBeam);
     SCHEMA_FIELD(Vector, m_vecEndPos);
     SCHEMA_FIELD(float, m_fWidth);
+    SCHEMA_FIELD(float, m_fEndWidth);
 };

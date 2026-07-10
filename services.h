@@ -26,6 +26,7 @@
 
 class CCSPlayerPawn;
 class CBaseEntity;
+class CPostProcessingVolume;
 
 struct CSPerRoundStats_t
 {
@@ -134,6 +135,7 @@ class CPlayer_MovementServices_Humanoid : public CPlayer_MovementServices
 public:
 	DECLARE_SCHEMA_CLASS(CPlayer_MovementServices_Humanoid);
 
+	SCHEMA_FIELD(float, m_flStepSoundTime)
 	SCHEMA_FIELD(float, m_flFallVelocity)
 	SCHEMA_FIELD(float, m_bInCrouch)
 	SCHEMA_FIELD(bool, m_bDucked)
@@ -149,7 +151,10 @@ public:
 	DECLARE_SCHEMA_CLASS(CPlayer_CameraServices);
 
 	SCHEMA_FIELD(QAngle, m_vecCsViewPunchAngle)
+	SCHEMA_FIELD(int32, m_nCsViewPunchAngleTick)
+	SCHEMA_FIELD(float, m_flCsViewPunchAngleTickRatio)
 	SCHEMA_FIELD(CHandle<CBaseEntity>, m_hViewEntity)
+	SCHEMA_FIELD_POINTER(CUtlVector<CHandle<CPostProcessingVolume>>, m_PostProcessingVolumes)
 };
 
 class CCSPlayer_MovementServices : public CPlayer_MovementServices_Humanoid
@@ -164,8 +169,11 @@ public:
 	SCHEMA_FIELD(float, m_flDuckSpeed)
 	SCHEMA_FIELD(bool, m_bDuckOverride)
 	SCHEMA_FIELD(int32, m_nOldWaterLevel)
+	SCHEMA_FIELD(bool, m_bMadeFootstepNoise)
 	SCHEMA_FIELD(int32, m_iFootsteps)
 	SCHEMA_FIELD(float, m_flAccumulatedJumpError)
+	SCHEMA_FIELD(Vector, m_vecLeft)
+	SCHEMA_FIELD(Vector, m_vecForward)
 };
 
 class CPlayer_WeaponServices : public CPlayerPawnComponent
