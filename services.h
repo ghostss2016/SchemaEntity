@@ -264,7 +264,9 @@ private:
 
 public:
 	virtual bool GiveNamedItemBool(const char* pchName) = 0;
-	virtual CBasePlayerWeapon* GiveNamedItem(const char* pchName) = 0;
+	// build 2000872: GiveNamedItem стал 5-арговым. Дефолты -> старые call-site'ы (GiveNamedItem(name))
+	// компилируются как раньше, но передают верный ABI (иначе мусор в rsi/rdx/... -> оружие не выдаётся).
+	virtual CBasePlayerWeapon* GiveNamedItem(const char* pchName, int iSubType = 0, void* pScriptItem = nullptr, bool bRemoveIfNotCarried = false, void* pUnknown = nullptr) = 0;
 	// Recommended to use CCSPlayer_WeaponServices::DropWeapon instead (parameter is ignored here)
 	virtual void DropActiveWeapon(CBasePlayerWeapon* pWeapon) = 0;
 	virtual void StripPlayerWeapons(bool removeSuit) = 0;
