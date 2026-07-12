@@ -260,10 +260,10 @@ public:
 	DECLARE_SCHEMA_CLASS(CCSPlayer_ItemServices);
 
 public:
-	virtual CBasePlayerWeapon* _GiveNamedItem(const char* pchName) = 0;   // slot1, был private — открыл для теста
-	virtual bool GiveNamedItemBool(const char* pchName) = 0;
-	// build 2000872: GiveNamedItem стал 5-арговым. Дефолты -> старые call-site'ы (GiveNamedItem(name))
-	// компилируются как раньше, но передают верный ABI (иначе мусор в rsi/rdx/... -> оружие не выдаётся).
+	virtual CBasePlayerWeapon* _GiveNamedItem(const char* pchName) = 0;
+	// build 2000872: движок УБРАЛ GiveNamedItemBool (DIAG: slot2 вернул 64 = указатель, не bool) →
+	// настоящий GiveNamedItem сдвинулся на этот слот. Убираем GiveNamedItemBool чтобы выровнять vtable.
+	// virtual bool GiveNamedItemBool(const char* pchName) = 0;   // <-- УБРАН (не существует в 2000872)
 	virtual CBasePlayerWeapon* GiveNamedItem(const char* pchName, int iSubType = 0, void* pScriptItem = nullptr, bool bRemoveIfNotCarried = false, void* pUnknown = nullptr) = 0;
 	// Recommended to use CCSPlayer_WeaponServices::DropWeapon instead (parameter is ignored here)
 	virtual void DropActiveWeapon(CBasePlayerWeapon* pWeapon) = 0;
