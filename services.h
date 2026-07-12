@@ -259,10 +259,8 @@ class CCSPlayer_ItemServices : public CPlayer_ItemServices
 public:
 	DECLARE_SCHEMA_CLASS(CCSPlayer_ItemServices);
 
-private:
-	virtual CBasePlayerWeapon* _GiveNamedItem(const char* pchName) = 0;
-
 public:
+	virtual CBasePlayerWeapon* _GiveNamedItem(const char* pchName) = 0;   // slot1, был private — открыл для теста
 	virtual bool GiveNamedItemBool(const char* pchName) = 0;
 	// build 2000872: GiveNamedItem стал 5-арговым. Дефолты -> старые call-site'ы (GiveNamedItem(name))
 	// компилируются как раньше, но передают верный ABI (иначе мусор в rsi/rdx/... -> оружие не выдаётся).
