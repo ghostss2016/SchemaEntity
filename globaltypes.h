@@ -19,6 +19,10 @@
 
 #pragma once
 #include <platform.h>
+// Ray_t (используется в TraceHistory ниже) раньше приходил транзитивно. В свежем hl2sdk
+// он объявлен в public/ray.h, и без явного подключения сборка падает на «unknown type
+// name 'Ray_t'». Подключаем напрямую — на старом SDK этот заголовок тоже есть.
+#include <ray.h>
 #include "schemasystem.h"
 #include "soundflags.h"
 
