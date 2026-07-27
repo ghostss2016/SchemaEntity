@@ -19,10 +19,12 @@
 
 #pragma once
 #include <platform.h>
-// Ray_t (используется в TraceHistory ниже) раньше приходил транзитивно. В свежем hl2sdk
-// он объявлен в public/ray.h, и без явного подключения сборка падает на «unknown type
-// name 'Ray_t'». Подключаем напрямую — на старом SDK этот заголовок тоже есть.
+// Ray_t и CHitBox (используются в TraceHistory ниже) раньше приходили транзитивно.
+// В свежем hl2sdk их надо подключать явно: Ray_t живёт в public/ray.h, CHitBox — в
+// public/gametrace.h. Оба заголовка есть и в старом SDK, так что сборка остаётся
+// совместимой в обе стороны.
 #include <ray.h>
+#include <gametrace.h>
 #include "schemasystem.h"
 #include "soundflags.h"
 
