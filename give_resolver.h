@@ -27,9 +27,10 @@ namespace CS2Give
 	static const char*     SIG_GiveNamedItem = "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
 	static const char*     SIG_EquipWeapon   = "55 48 89 E5 41 55 41 54 49 89 FC 53 48 89 F3 48 83 EC ? 48 8B 77";
 	// ---- VMA-якорь (fallback для случая когда GiveNamedItem захукана инлайн-детуром и её пролог-сигнатура
-	//      не матчится). Значения для libserver.so build 2000873 (md5 79c2f6cd...). Регенерить из _sigpipe/sig_gen.py. ----
-	static const uintptr_t VMA_GiveNamedItem = 0x152c9a0;
-	static const uintptr_t VMA_EquipWeapon   = 0x1598100;
+	//      не матчится). Значения для libserver.so build 2000877 (сняты сканом прологов 2026-07-28,
+	//      оба уникальны: Give=1 совпадение, Equip=1 совпадение). Регенерить из _sigpipe/sig_gen.py. ----
+	static const uintptr_t VMA_GiveNamedItem = 0x152c6e0;
+	static const uintptr_t VMA_EquipWeapon   = 0x1597e40;
 
 	// Скан паттерна ("55 48 ? 89", ? = wildcard) по r-x регионам modules из /proc/self/maps.
 	inline uintptr_t ProcMapsScan(const char* moduleSubstr, const char* pattern, int* pCount = nullptr)
