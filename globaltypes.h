@@ -21,9 +21,22 @@
 #include <platform.h>
 // Ray_t и CHitBox (используются в TraceHistory ниже) раньше приходили транзитивно.
 // В свежем hl2sdk их надо подключать явно: Ray_t живёт в public/ray.h, CHitBox — в
-// public/gametrace.h. Оба заголовка есть и в старом SDK, так что сборка остаётся
-// совместимой в обе стороны.
-#include <ray.h>
+// public/gametrace.h.
+//
+// [31.07.2026] Утверждение «оба заголовка есть и в старом SDK» оказалось неверным:
+// в локальном дереве сборки (_mmbuild/hl2sdk-cs2) файла public/ray.h НЕТ, и с 27.07
+// это ломало сборку КАЖДОГО плагина, который тянет SchemaEntity —
+// «fatal error: 'ray.h' file not found». В том SDK Ray_t приходит через
+// gametrace.h -> ispatialpartition.h, поэтому отдельный заголовок там не нужен.
+// Включаем его только если он реально есть — так дерево собирается и на свежем SDK,
+// и на старом, без развилок в скриптах сборки.
+#if defined(__has_include)
+#  if __has_include(<ray.h>)
+#    include <ray.h>
+#  endif
+#else
+#  include <ray.h>
+#endif
 #include <gametrace.h>
 #include "schemasystem.h"
 #include "soundflags.h"
