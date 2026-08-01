@@ -219,6 +219,65 @@ int32_t schema::GetServerOffset(const char* pszClassName, const char* pszPropNam
     return -1;
 }
 
+// ============================================================================
+// [01.08.2026] Снимок всей схемы движка. Зачем — см. объявление в schemasystem.h.
+// ============================================================================
+int schema::DumpAllToFile(const char* pszPath)
+{
+    if (!g_pSchemaSystem || !pszPath || !pszPath[0])
+        return 0;
+
+    CSchemaSystemTypeScope* pType = g_pSchemaSystem->FindTypeScopeForModule(MODULE_PREFIX "server" MODULE_EXT);
+    if (!pType)
+        return 0;
+
+    FILE* fp = fopen(pszPath, "w");
+    if (!fp)
+        return 0;
+
+    auto& classes = pType->m_DeclaredClasses.m_Map;
+
+    fprintf(fp, "# Снимок схемы движка. Строки: КЛАСС имя размер=N полей=M, затем «смещение имя».\n");
+    fprintf(fp, "# Сравнивать снимки до и после обновления игры обычным diff.\n");
+    fprintf(fp, "# Классов в схеме: %u\n", classes.Count());
+
+    int nDumped = 0;
+    for (auto i = classes.FirstInorder(); i != classes.InvalidIndex(); i = classes.NextInorder(i))
+    {
+        CSchemaType_DeclaredClass* pDecl = classes.Element(i);
+        if (!pDecl || !pDecl->m_pClassInfo)
+            continue;
+
+        // m_pClassInfo объявлен непрозрачным типом, но лежит по нему именно этот блок данных:
+        // на него же указывает обратная ссылка m_pDeclaredClass. Так к нему обращается и сам SDK.
+        SchemaClassInfoData_t* pInfo = reinterpret_cast<SchemaClassInfoData_t*>(pDecl->m_pClassInfo);
+        if (!pInfo || !pInfo->m_pszName)
+            continue;
+
+        // Защита от мусора: если счётчик полей неправдоподобен, класс пропускаем целиком,
+        // а не идём по нему в цикле. Снимок не должен уронить сервер, ради которого он снят.
+        const uint16 nFields = pInfo->m_nFieldCount;
+        if (nFields > 0 && !pInfo->m_pFields)
+            continue;
+
+        fprintf(fp, "КЛАСС %s размер=%d полей=%u\n", pInfo->m_pszName, pInfo->m_nSize, (unsigned)nFields);
+
+        for (uint16 f = 0; f < nFields; ++f)
+        {
+            const SchemaClassFieldData_t& fld = pInfo->m_pFields[f];
+            if (!fld.m_pszName)
+                continue;
+            fprintf(fp, "  %d %s\n", fld.m_nSingleInheritanceOffset, fld.m_pszName);
+        }
+
+        ++nDumped;
+    }
+
+    fprintf(fp, "# Выгружено классов: %d\n", nDumped);
+    fclose(fp);
+    return nDumped;
+}
+
 void NetworkVarStateChanged(uintptr_t pNetworkVar, uint32_t nOffset, uint32 nNetworkStateChangedOffset)
 {
 	NetworkStateChangedData data(nOffset);
