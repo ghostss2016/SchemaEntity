@@ -26,11 +26,13 @@ namespace CS2Give
 	// ---- Сигнатуры прологов (основной путь — авто-находят адрес на ЛЮБОМ билде, пока пролог цел). ----
 	static const char*     SIG_GiveNamedItem = "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
 	static const char*     SIG_EquipWeapon   = "55 48 89 E5 41 55 41 54 49 89 FC 53 48 89 F3 48 83 EC ? 48 8B 77";
-	// Тот же пролог БЕЗ первых 5 байт: ровно столько затирает инлайн-детур (`e9` + смещение).
-	// Нужен, чтобы находить функцию, даже когда её уже захукали, — без единой константы адреса.
-	// Проверено на libserver.so от 04.08.2026: хвост уникален (1 совпадение).
-	static const char*     SIG_GiveNamedItem_Tail = "41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
-	static const size_t    SIG_GiveNamedItem_TailSkip = 5;
+	// Сколько байт в начале функции затирает инлайн-детур — величина НЕ постоянная:
+	// сам переход занимает 5 байт (`e9` + смещение), но его добивают до границы команды.
+	// На живом сервере 04.08.2026 в памяти лежало `E9 DB CF 50 DD 90` — шесть байт.
+	// Поэтому длину не угадываем: пробуем отступы по возрастанию и берём первый, который
+	// даёт ровно одно совпадение. Проверено — на текущем движке однозначен любой из них.
+	static const size_t    SIG_TailSkips[]  = { 5, 6, 7, 8, 10, 12, 14, 16 };
+	static const size_t    SIG_TailSkipsNum = sizeof(SIG_TailSkips) / sizeof(SIG_TailSkips[0]);
 
 	// ⛔ ЗАШИТЫХ АДРЕСОВ ЗДЕСЬ БОЛЬШЕ НЕТ — И ДОБАВЛЯТЬ ИХ НЕЛЬЗЯ.
 	// Раньше тут лежали VMA_GiveNamedItem/VMA_EquipWeapon, и база движка считалась как
@@ -98,11 +100,27 @@ namespace CS2Give
 		return s_base;
 	}
 
-	// Адрес GiveNamedItem на ЖИВОМ процессе. Два пути, оба — поиск по байтам, без констант:
+	// Пропустить n токенов образца («55 48 89 E5 …» или «?»), вернуть указатель на остаток.
+	// Так из одного описания пролога получаем его хвост любой длины — без второй копии строки.
+	inline const char* SkipTokens(const char* pattern, size_t n)
+	{
+		const char* c = pattern;
+		for (size_t seen = 0; *c && seen < n; seen++) {
+			while (*c == ' ') c++;
+			if (!*c) break;
+			if (*c == '?') { c++; if (*c == '?') c++; }
+			else { c += 2; }
+		}
+		while (*c == ' ') c++;
+		return c;
+	}
+
+	// Адрес GiveNamedItem на ЖИВОМ процессе. Только поиск по байтам, ни одной константы:
 	//   1) целый пролог — когда функция не захукана;
-	//   2) хвост пролога без первых 5 байт — когда её затёр инлайн-детур; отступаем назад
-	//      на эти 5 байт и получаем настоящее начало функции.
-	// Ни один не сошёлся → nullptr. Звать мусор нельзя: именно это роняло серверы 04.08.2026.
+	//   2) если захукана, начало затёрто переходом: отрезаем от образца по нескольку байт
+	//      и ищем хвост, пока не найдём ровно одно совпадение; вычитаем отступ — получаем
+	//      настоящее начало функции.
+	// Ни один путь не сошёлся → nullptr. Звать мусор нельзя: именно это роняло серверы.
 	inline GiveNamedItem_t GiveNamedItem()
 	{
 		static GiveNamedItem_t s_fn = nullptr;
@@ -112,9 +130,14 @@ namespace CS2Give
 		int c = 0;
 		uintptr_t a = ProcMapsScan("libserver.so", SIG_GiveNamedItem, &c);
 		if (c == 1 && a) { s_fn = reinterpret_cast<GiveNamedItem_t>(a); return s_fn; }
-		c = 0;
-		a = ProcMapsScan("libserver.so", SIG_GiveNamedItem_Tail, &c);
-		if (c == 1 && a) { s_fn = reinterpret_cast<GiveNamedItem_t>(a - SIG_GiveNamedItem_TailSkip); }
+		for (size_t i = 0; i < SIG_TailSkipsNum; i++) {
+			c = 0;
+			a = ProcMapsScan("libserver.so", SkipTokens(SIG_GiveNamedItem, SIG_TailSkips[i]), &c);
+			if (c == 1 && a) {
+				s_fn = reinterpret_cast<GiveNamedItem_t>(a - SIG_TailSkips[i]);
+				return s_fn;
+			}
+		}
 		return s_fn;
 	}
 
