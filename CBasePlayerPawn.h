@@ -20,7 +20,11 @@ public:
 
     void CommitSuicide(bool bExplode, bool bForce)
 	{
-		CALL_VIRTUAL(void, 380, this, bExplode, bForce);
+		// Слот сверен по таблице движка 04.08.2026: 384 → 0xad0010, начало функции
+		// (пролог `push %rbp; lea …`). Прежнее значение 380 указывало на 0xb0ffa0 —
+		// середину чужой команды, то есть вызов уходил в никуда.
+		// Выведено якорем по консольным командам kill/explode: 0xc00/8 = 384.
+		CALL_VIRTUAL(void, 384, this, bExplode, bForce);
 	}
 
 	CBasePlayerController *GetController() { return m_hController.Get(); }
