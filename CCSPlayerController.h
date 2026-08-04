@@ -1,4 +1,5 @@
 #pragma once
+#include "vtable_resolve.h"
 #include "CBasePlayerController.h"
 #include "services.h"
 
@@ -57,13 +58,13 @@ public:
 
 	void ChangeTeam(int iTeam)
 	{
-		CALL_VIRTUAL(void, 99, this, iTeam);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayerController::ChangeTeam", 99, this, iTeam);
 	}
 
 	void Respawn()
 	{
 		// CSS gamedata.json says CCSPlayerController_Respawn = 274 on Linux
-		CALL_VIRTUAL(void, 274, this);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayerController::Respawn", 274, this);
 	}
 
 	CSPlayerState GetPawnState()

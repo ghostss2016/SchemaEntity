@@ -18,6 +18,7 @@
  */
 
 #pragma once
+#include "vtable_resolve.h"
 #include <bitset>
 #include <platform.h>
 #include "globaltypes.h"
@@ -232,7 +233,7 @@ public:
 
 	void DropWeapon(CBasePlayerWeapon* pWeapon, Vector* pVecTarget = nullptr, Vector* pVelocity = nullptr)
 	{
-		CALL_VIRTUAL(void, 24, this, pWeapon, pVecTarget, pVelocity);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_WeaponServices::DropWeapon", 24, this, pWeapon, pVecTarget, pVelocity);
 	}
 };
 
@@ -274,7 +275,7 @@ public:
 
 	void RemoveWeapons()
     {
-		CALL_VIRTUAL(void, 23, this);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_ItemServices::RemoveWeapons", 23, this);
     }
 };
 

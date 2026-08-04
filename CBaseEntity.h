@@ -6,6 +6,7 @@
 #include "globaltypes.h"
 #include "ctakedamageinfo.h"
 #include "virtual.h"
+#include "vtable_resolve.h"
 
 extern CEntitySystem* g_pEntitySystem;
 
@@ -213,7 +214,7 @@ public:
 
 	void Teleport(const Vector *position, const QAngle *angles, const Vector *velocity)
 	{
-		CALL_VIRTUAL(void, 167, this, position, angles, velocity);
+		CALL_VIRTUAL_RESOLVED(void, "CBaseEntity::Teleport", 167, this, position, angles, velocity);
 	}
 	
 	void SetMoveType(MoveType_t nMoveType)
@@ -247,7 +248,7 @@ public:
 
 	void CollisionRulesChanged()
 	{
-		CALL_VIRTUAL(void, 190, this);
+		CALL_VIRTUAL_RESOLVED(void, "CBaseEntity::CollisionRulesChanged", 190, this);
 	}
 
 	int GetTeam() { return m_iTeamNum(); }
