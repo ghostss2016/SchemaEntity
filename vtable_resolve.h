@@ -42,11 +42,39 @@ namespace vmt
 	// широкий поиск лишь повышает шанс наткнуться на похожую чужую функцию.
 	static const int    kScanRadius = 48;
 
+	/**
+	 * Путь к файлу отпечатков — рядом с остальными конфигами сервера: таблицы у всех
+	 * плагинов одни и те же, поэтому файл общий.
+	 *
+	 * Считаем его от РАСПОЛОЖЕНИЯ САМОГО ПЛАГИНА в памяти, а не относительным путём:
+	 * рабочий каталог игрового процесса — `game/bin/linuxsteamrt64`, а вовсе не игровой,
+	 * так что относительный путь ушёл бы в несуществующую папку и запись молча
+	 * провалилась бы. Проверено на живом сервере.
+	 */
 	inline std::string FingerprintPath()
 	{
-		// Рядом с остальными конфигами сервера: файл общий для всех плагинов,
-		// потому что таблицы у них одни и те же.
-		return "addons/configs/vtable_fingerprints.txt";
+		static std::string s_path;
+		if (!s_path.empty()) return s_path;
+
+		if (FILE *f = fopen("/proc/self/maps", "r"))
+		{
+			char line[1024];
+			while (fgets(line, sizeof(line), f))
+			{
+				const char *marker = strstr(line, "/addons/");
+				if (!marker) continue;
+				const char *slash = strchr(line, '/');
+				if (!slash || slash > marker) continue;
+				s_path.assign(slash, marker - slash);          // …/game/csgo
+				s_path += "/addons/configs/vtable_fingerprints.txt";
+				break;
+			}
+			fclose(f);
+		}
+		// Не нашли себя в карте памяти — пишем рядом с процессом, чтобы файл хотя бы
+		// появился и это было заметно, а не потерялось совсем.
+		if (s_path.empty()) s_path = "vtable_fingerprints.txt";
+		return s_path;
 	}
 
 	inline std::unordered_map<std::string, std::string> &FingerprintStore()
