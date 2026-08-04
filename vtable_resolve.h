@@ -213,6 +213,74 @@ namespace vmt
 		return -1;
 	}
 
+	/**
+	 * То же самое, но по ГОТОВОЙ таблице — объект не нужен.
+	 *
+	 * Таблицу можно взять на старте по имени класса: `libserver.GetVirtualTableByName(
+	 * "CCSPlayerPawn")` (DynLibUtils, module.h) — имена классов остаются в бинаре через
+	 * RTTI даже после вырезания символов. Это позволяет проверить все номера ПРИ
+	 * ЗАГРУЗКЕ, до входа игроков: сломанный слот виден сразу в логе запуска, а не
+	 * всплывает в бою через сутки.
+	 *
+	 * Возврат -1 — «не нашли», вызывать нельзя.
+	 */
+	inline int ResolveSlotInTable(void **vt, uint32 hint, const char *key)
+	{
+		static std::unordered_map<std::string, int> s_cache;
+		const std::string k(key);
+		auto it = s_cache.find(k);
+		if (it != s_cache.end()) return it->second;
+		if (!vt) return (int)hint;
+
+		auto &store = FingerprintStore();
+		auto fit = store.find(k);
+
+		if (fit == store.end())
+		{
+			void *pT = vt[hint];
+			if (!pT || !IsExecutableAddress(pT))
+			{
+				Warning("[vtable] %s: слот %u не указывает на код, отпечатка ещё нет — "
+						"возможность отключена\n", key, hint);
+				s_cache[k] = -1;
+				return -1;
+			}
+			std::string print = BytesToHex(FollowThunk(static_cast<const unsigned char *>(pT)), kPrintLen);
+			store[k] = print;
+			if (FILE *f = fopen(FingerprintPath().c_str(), "a"))
+			{
+				fprintf(f, "%s=%s\n", key, print.c_str());
+				fclose(f);
+			}
+			s_cache[k] = (int)hint;
+			return (int)hint;
+		}
+
+		if (MatchesPrint(vt[hint], fit->second))
+		{
+			s_cache[k] = (int)hint;
+			return (int)hint;
+		}
+		for (int d = 1; d <= kScanRadius; d++)
+			for (int sign = -1; sign <= 1; sign += 2)
+			{
+				const int idx = (int)hint + sign * d;
+				if (idx < 0) continue;
+				if (MatchesPrint(vt[idx], fit->second))
+				{
+					Warning("[vtable] %s: слот съехал %u → %d (обновление движка). "
+							"Работаем по найденному.\n", key, hint, idx);
+					s_cache[k] = idx;
+					return idx;
+				}
+			}
+
+		Warning("[vtable] %s: функция не найдена рядом со слотом %u — возможность "
+				"отключена. Похоже, движок переписал её тело.\n", key, hint);
+		s_cache[k] = -1;
+		return -1;
+	}
+
 	/** Вызов с самонаведением. Ничего не делает, если слот не сошёлся. */
 	template <typename T, typename... Args>
 	inline T CallVirtualResolved(const char *key, uint32 hint, void *pClass, Args... args)
