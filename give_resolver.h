@@ -26,11 +26,19 @@ namespace CS2Give
 	// ---- Сигнатуры прологов (основной путь — авто-находят адрес на ЛЮБОМ билде, пока пролог цел). ----
 	static const char*     SIG_GiveNamedItem = "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
 	static const char*     SIG_EquipWeapon   = "55 48 89 E5 41 55 41 54 49 89 FC 53 48 89 F3 48 83 EC ? 48 8B 77";
-	// ---- VMA-якорь (fallback для случая когда GiveNamedItem захукана инлайн-детуром и её пролог-сигнатура
-	//      не матчится). Значения для libserver.so build 2000877 (сняты сканом прологов 2026-07-28,
-	//      оба уникальны: Give=1 совпадение, Equip=1 совпадение). Регенерить из _sigpipe/sig_gen.py. ----
-	static const uintptr_t VMA_GiveNamedItem = 0x152c6e0;
-	static const uintptr_t VMA_EquipWeapon   = 0x1597e40;
+	// Тот же пролог БЕЗ первых 5 байт: ровно столько затирает инлайн-детур (`e9` + смещение).
+	// Нужен, чтобы находить функцию, даже когда её уже захукали, — без единой константы адреса.
+	// Проверено на libserver.so от 04.08.2026: хвост уникален (1 совпадение).
+	static const char*     SIG_GiveNamedItem_Tail = "41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
+	static const size_t    SIG_GiveNamedItem_TailSkip = 5;
+
+	// ⛔ ЗАШИТЫХ АДРЕСОВ ЗДЕСЬ БОЛЬШЕ НЕТ — И ДОБАВЛЯТЬ ИХ НЕЛЬЗЯ.
+	// Раньше тут лежали VMA_GiveNamedItem/VMA_EquipWeapon, и база движка считалась как
+	// «найденный адрес − VMA». Из-за этого переезд одной функции уводил базу, а вместе с ней
+	// и ВСЕ адреса, посчитанные от неё. Обновление 04.08.2026 сдвинуло EquipWeapon на 0x48c0 —
+	// выдача предмета ушла в середину чужой функции, и серверы падали на спавне пачками.
+	// Теперь адрес каждой функции ищется сигнатурой на живом процессе, а не арифметикой от
+	// константы. Не находится — возвращаем nullptr: лучше не выдать предмет, чем звать мусор.
 
 	// Скан паттерна ("55 48 ? 89", ? = wildcard) по r-x регионам modules из /proc/self/maps.
 	inline uintptr_t ProcMapsScan(const char* moduleSubstr, const char* pattern, int* pCount = nullptr)
@@ -67,22 +75,34 @@ namespace CS2Give
 		return first;
 	}
 
-	// База загрузки libserver, вычислена от якоря EquipWeapon (кэш). 0 если не удалось резолвить.
+	// Базовый адрес загрузки libserver.so — берётся НАПРЯМУЮ из карты памяти процесса.
+	// Никакого вычитания константы: самый низкий адрес среди r-x областей модуля и есть база.
+	// Оставлено для тех, кому база нужна сама по себе; резолв функций её больше не использует.
 	inline uintptr_t ModuleBase()
 	{
 		static uintptr_t s_base = (uintptr_t)-1;
-		if (s_base == (uintptr_t)-1) {
-			int c = 0;
-			uintptr_t a = ProcMapsScan("libserver.so", SIG_EquipWeapon, &c);
-			s_base = (c == 1 && a) ? (a - VMA_EquipWeapon) : 0;
+		if (s_base != (uintptr_t)-1) return s_base;
+		s_base = 0;
+		FILE* f = fopen("/proc/self/maps", "r");
+		if (!f) return s_base;
+		char line[512];
+		uintptr_t lowest = 0;
+		while (fgets(line, sizeof(line), f)) {
+			if (!strstr(line, "libserver.so")) continue;
+			unsigned long a = 0, b = 0;
+			if (sscanf(line, "%lx-%lx", &a, &b) != 2) continue;
+			if (!lowest || (uintptr_t)a < lowest) lowest = (uintptr_t)a;
 		}
+		fclose(f);
+		s_base = lowest;
 		return s_base;
 	}
 
-	// Готовый вызываемый указатель GiveNamedItem. Двухуровневый резолв:
-	//   1) прямая сигнатура пролога — сработает на ЛЮБОМ билде, если функция НЕ захукана (полный автохил);
-	//   2) если захукана (пролог перезаписан e9-jmp → сигнатура m=0) — якорь по EquipWeapon + VMA-дельта.
-	// nullptr если ни один путь не сошёлся (fail-safe: лучше не выдать, чем звать мусор и крашить).
+	// Адрес GiveNamedItem на ЖИВОМ процессе. Два пути, оба — поиск по байтам, без констант:
+	//   1) целый пролог — когда функция не захукана;
+	//   2) хвост пролога без первых 5 байт — когда её затёр инлайн-детур; отступаем назад
+	//      на эти 5 байт и получаем настоящее начало функции.
+	// Ни один не сошёлся → nullptr. Звать мусор нельзя: именно это роняло серверы 04.08.2026.
 	inline GiveNamedItem_t GiveNamedItem()
 	{
 		static GiveNamedItem_t s_fn = nullptr;
@@ -91,14 +111,23 @@ namespace CS2Give
 		s_done = true;
 		int c = 0;
 		uintptr_t a = ProcMapsScan("libserver.so", SIG_GiveNamedItem, &c);
-		if (c == 1) { s_fn = reinterpret_cast<GiveNamedItem_t>(a); return s_fn; }   // не захукана → авто
-		uintptr_t b = ModuleBase();                                                 // захукана → якорь
-		s_fn = b ? reinterpret_cast<GiveNamedItem_t>(b + VMA_GiveNamedItem) : nullptr;
+		if (c == 1 && a) { s_fn = reinterpret_cast<GiveNamedItem_t>(a); return s_fn; }
+		c = 0;
+		a = ProcMapsScan("libserver.so", SIG_GiveNamedItem_Tail, &c);
+		if (c == 1 && a) { s_fn = reinterpret_cast<GiveNamedItem_t>(a - SIG_GiveNamedItem_TailSkip); }
 		return s_fn;
 	}
+
+	// Адрес EquipWeapon — так же поиском по прологу. Её не хукают, одного пути достаточно.
 	inline EquipWeapon_t EquipWeapon()
 	{
-		uintptr_t b = ModuleBase();
-		return b ? reinterpret_cast<EquipWeapon_t>(b + VMA_EquipWeapon) : nullptr;
+		static EquipWeapon_t s_fn = nullptr;
+		static bool s_done = false;
+		if (s_done) return s_fn;
+		s_done = true;
+		int c = 0;
+		uintptr_t a = ProcMapsScan("libserver.so", SIG_EquipWeapon, &c);
+		if (c == 1 && a) s_fn = reinterpret_cast<EquipWeapon_t>(a);
+		return s_fn;
 	}
 }
