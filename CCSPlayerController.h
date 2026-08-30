@@ -63,8 +63,10 @@ public:
 
 	void Respawn()
 	{
-		// CSS gamedata.json says CCSPlayerController_Respawn = 274 on Linux
-		CALL_VIRTUAL_RESOLVED(void, "CCSPlayerController::Respawn", 274, this);
+		// CS2 build 25000182: primary CCSPlayerController vtable slot 272.
+		// Slot 275 is a secondary-vtable header, not executable code. Re-derive
+		// after updates with engine-watch/tools/resolve_respawn.py.
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayerController::Respawn", 272, this);
 	}
 
 	CSPlayerState GetPawnState()
