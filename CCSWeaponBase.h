@@ -166,7 +166,7 @@ public:
 	DECLARE_SCHEMA_CLASS(CCSWeaponBase)
 
 	SCHEMA_FIELD(bool, m_bInReload);
-	SCHEMA_FIELD(bool, m_bReloadVisuallyComplete);
+	// m_bReloadVisuallyComplete: no matching server schema field; no offset-zero accessor.
 
 	SCHEMA_FIELD(float, m_fAccuracyPenalty);
 	SCHEMA_FIELD(int, m_iRecoilIndex);

@@ -40,12 +40,12 @@ public:
 	SCHEMA_FIELD(float, m_flOriginalDamage);
 	SCHEMA_FIELD(bool, m_bShouldBleed);
 	SCHEMA_FIELD(bool, m_bShouldSpark);
-	SCHEMA_FIELD(float, m_flDamageAbsorbed);
+	// m_flDamageAbsorbed: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(TakeDamageFlags_t, m_nDamageFlags);
 	SCHEMA_FIELD(HitGroup_t, m_iHitGroupId);
 	SCHEMA_FIELD(int32_t, m_nNumObjectsPenetrated);
 	SCHEMA_FIELD(float, m_flFriendlyFireDamageReductionRatio);
-	SCHEMA_FIELD(AttackerInfo_t, m_AttackerInfo);
+	// m_AttackerInfo: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(bool, m_bInTakeDamageFlow);
 };
 
@@ -53,5 +53,5 @@ struct CTakeDamageInfoContainer
 {
 	DECLARE_SCHEMA_CLASS(CTakeDamageInfoContainer)
 
-	SCHEMA_FIELD_POINTER(CTakeDamageInfo, m_DamageInfo);
+	// m_DamageInfo: no matching server schema field; no offset-zero accessor.
 };

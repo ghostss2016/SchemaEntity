@@ -46,13 +46,11 @@ public:
 	SCHEMA_FIELD(CSPlayerState, m_iPlayerState)
 	SCHEMA_FIELD(CHandle<CCSPlayerController>, m_hOriginalController)
 	SCHEMA_FIELD(int32_t, m_iProgressBarDuration);
-	SCHEMA_FIELD(CPlayer_ViewModelServices*, m_pViewModelServices)
+	// m_pViewModelServices: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(float, m_flFlashDuration)
 	SCHEMA_FIELD(float, m_flFlashMaxAlpha)
 	SCHEMA_FIELD(GameTime_t, m_blindUntilTime)
 	SCHEMA_FIELD(GameTime_t, m_blindStartTime)
-	SCHEMA_FIELD(GameTime_t, m_fImmuneToGunGameDamageTime)
-	SCHEMA_FIELD(bool, m_bGunGameImmunity)
 	// NOTE: m_iIDEntIndex REMOVED - field is client-side only (doesn't exist in server schema)
 	// SCHEMA_FIELD(CEntityIndex, m_iIDEntIndex)  // Entity in crosshair (for triggerbot)
 
@@ -71,6 +69,10 @@ class CCSPlayerPawn : public CCSPlayerPawnBase
 {
 public:
 	DECLARE_SCHEMA_CLASS(CCSPlayerPawn);
+
+	// These fields belong to the concrete CS2 pawn, not CCSPlayerPawnBase.
+	SCHEMA_FIELD(GameTime_t, m_fImmuneToGunGameDamageTime)
+	SCHEMA_FIELD(bool, m_bGunGameImmunity)
 
 	SCHEMA_FIELD(QAngle, m_angEyeAngles);
 	SCHEMA_FIELD(CEconItemView, m_EconGloves);

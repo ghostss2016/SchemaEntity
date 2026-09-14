@@ -91,7 +91,7 @@ public:
 	SCHEMA_FIELD(float, m_flAbsScale);
 	SCHEMA_FIELD(Vector, m_vecAbsOrigin);
 	SCHEMA_FIELD(QAngle, m_angAbsRotation);
-	SCHEMA_FIELD(Vector, m_vRenderOrigin);
+	// m_vRenderOrigin: no matching server schema field; no offset-zero accessor.
 
 	matrix3x4_t EntityToWorldTransform()
 	{
@@ -190,7 +190,7 @@ public:
 	SCHEMA_FIELD(float, m_flGravityScale)
 	SCHEMA_FIELD(float, m_flActualGravityScale)
 	SCHEMA_FIELD(float, m_flTimeScale)
-	SCHEMA_FIELD(float, m_flSpeed)
+	// m_flSpeed: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(CUtlString, m_sUniqueHammerID)
 	SCHEMA_FIELD(CUtlSymbolLarge, m_target)
 	SCHEMA_FIELD(CUtlSymbolLarge, m_iGlobalname)

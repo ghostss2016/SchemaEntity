@@ -38,7 +38,7 @@ public:
 	SCHEMA_FIELD(GamePhase, m_gamePhase);
 	SCHEMA_FIELD(bool, m_bGameRestart);
 	SCHEMA_FIELD(bool, m_bBombPlanted);
-	SCHEMA_FIELD(int32_t, m_totaArenaoundsPlayed);
+	// m_totaArenaoundsPlayed: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(int32_t, m_nOvertimePlaying);
 	SCHEMA_FIELD(bool, m_bBuyTimeEnded);
 	SCHEMA_FIELD(bool, m_bTCantBuy);

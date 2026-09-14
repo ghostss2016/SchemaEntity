@@ -18,5 +18,6 @@ public:
 	SCHEMA_FIELD(intptr_t, m_hSkyMaterialLightingOnly)
 	SCHEMA_FIELD(Color, m_vTintColor)
 	SCHEMA_FIELD(float32, m_flBrightnessScale)
-	SCHEMA_FIELD_POINTER(char, m_iszPrivateVScripts)
+	// m_iszPrivateVScripts belongs to CEntityInstance (CUtlSymbolLarge), not CEnvSky.
+	// Use the inherited SDK member; a char-pointer schema accessor is incorrect.
 };

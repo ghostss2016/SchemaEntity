@@ -138,10 +138,9 @@ public:
 
 	SCHEMA_FIELD(float, m_flStepSoundTime)
 	SCHEMA_FIELD(float, m_flFallVelocity)
-	SCHEMA_FIELD(float, m_bInCrouch)
-	SCHEMA_FIELD(bool, m_bDucked)
-	SCHEMA_FIELD(uint32_t, m_nCrouchState)
-	SCHEMA_FIELD(bool, m_bInDuckJump)
+	// m_bInCrouch: no matching server schema field; no offset-zero accessor.
+	// m_nCrouchState: no matching server schema field; no offset-zero accessor.
+	// m_bInDuckJump: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(float, m_flSurfaceFriction)
 };
 
@@ -164,8 +163,10 @@ class CCSPlayer_MovementServices : public CPlayer_MovementServices_Humanoid
 public:
 	DECLARE_SCHEMA_CLASS(CCSPlayer_MovementServices);
 
-	SCHEMA_FIELD(float, m_flMaxFallVelocity)
-	SCHEMA_FIELD(float, m_flJumpVel)
+	SCHEMA_FIELD(bool, m_bDucked)
+
+	// m_flMaxFallVelocity: no matching server schema field; no offset-zero accessor.
+	// m_flJumpVel: no matching server schema field; no offset-zero accessor.
 	SCHEMA_FIELD(float, m_flStamina)
 	SCHEMA_FIELD(float, m_flDuckSpeed)
 	SCHEMA_FIELD(bool, m_bDuckOverride)
@@ -200,7 +201,7 @@ class CBaseViewModel : public CBaseModelEntity
 {
 public:
 	DECLARE_SCHEMA_CLASS(CBaseViewModel);
-	SCHEMA_FIELD(CUtlSymbolLarge, m_sVMName);	
+	// m_sVMName: no matching server schema field; no offset-zero accessor.
 };
 
 class CCSPlayer_ViewModelServices : public CPlayer_ViewModelServices
@@ -208,7 +209,7 @@ class CCSPlayer_ViewModelServices : public CPlayer_ViewModelServices
 	virtual ~CCSPlayer_ViewModelServices() = 0;
 public:
 	DECLARE_SCHEMA_CLASS(CCSPlayer_ViewModelServices);
-	SCHEMA_FIELD_POINTER(CHandle<CBaseViewModel>, m_hViewModel)
+	// m_hViewModel: no matching server schema field; no offset-zero accessor.
 	// SCHEMA_FIELD_POINTER(CHandle<CBodyComponentBaseAnimGraph>, m_hViewModel)
 };
 
@@ -219,8 +220,8 @@ public:
 	DECLARE_SCHEMA_CLASS(CCSPlayer_WeaponServices);
 
 	SCHEMA_FIELD(GameTime_t, m_flNextAttack)
-	SCHEMA_FIELD(bool, m_bIsLookingAtWeapon)
-	SCHEMA_FIELD(bool, m_bIsHoldingLookAtWeapon)
+	// m_bIsLookingAtWeapon: no matching server schema field; no offset-zero accessor.
+	// m_bIsHoldingLookAtWeapon: no matching server schema field; no offset-zero accessor.
 
 	SCHEMA_FIELD(CHandle<CBasePlayerWeapon>, m_hSavedWeapon)
 	SCHEMA_FIELD(int32_t, m_nTimeToMelee)
