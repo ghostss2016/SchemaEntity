@@ -4,6 +4,8 @@
 #include "services.h"
 #include "vtable_resolve.h"
 
+class CBasePlayerController;
+
 class CBasePlayerPawn : public CBaseModelEntity
 {
 public:
