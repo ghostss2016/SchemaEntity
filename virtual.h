@@ -19,6 +19,7 @@
 
 #pragma once
 #include "platform.h"
+#include "tier0/dbg.h"
 
 #include <cstdio>
 #include <cstring>
