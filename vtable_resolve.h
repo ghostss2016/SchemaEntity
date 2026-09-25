@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "virtual.h"
+#include "common_gamedata.h"
 
 namespace vmt
 {
@@ -283,17 +284,33 @@ namespace vmt
 
 	/** Вызов с самонаведением. Ничего не делает, если слот не сошёлся. */
 	template <typename T, typename... Args>
-	inline T CallVirtualResolved(const char *key, uint32 hint, void *pClass, Args... args)
+	inline T CallVirtualResolved(const char *key, void *pClass, Args... args)
 	{
+		const int hint = FleetGamedata::current().integer(std::string("Plugins/SchemaEntity/VTables/") + key);
+		if (hint < 0 || hint > 1024) {
+			FleetGamedata::reportUnavailable(key);
+			return T();
+		}
 		const int idx = ResolveSlot(pClass, hint, key);
-		if (idx < 0) return T();
+		if (idx < 0) {
+			FleetGamedata::reportUnavailable(key);
+			return T();
+		}
 		return CallVirtual<T>((uint32)idx, pClass, args...);
 	}
+	// Older callers may still supply a numeric hint. The shared INI remains
+	// authoritative; accepting the old call shape must not revive that hint.
+	template <typename T, typename... Args>
+	inline T CallVirtualResolved(const char *key, uint32, void *pClass, Args... args)
+	{
+		return CallVirtualResolved<T>(key, pClass, args...);
+	}
+
 }
 
 /**
  * Замена CALL_VIRTUAL там, где номер слота задан числом.
  * Старый макрос намеренно оставлен нетронутым: его тянут десятки плагинов.
  */
-#define CALL_VIRTUAL_RESOLVED(retType, key, hint, ...) \
-	vmt::CallVirtualResolved<retType>(key, hint, __VA_ARGS__)
+#define CALL_VIRTUAL_RESOLVED(retType, key, ...) \
+	vmt::CallVirtualResolved<retType>(key, __VA_ARGS__)

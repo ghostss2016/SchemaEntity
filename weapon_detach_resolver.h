@@ -20,12 +20,14 @@ namespace CS2Weapon
 
 	// CS2 build 2000873.  The complete entry sequence is long enough to be
 	// unique while allowing relocations/branch distances to move.
-	static const char* SIG_DetachWeapon =
-		"48 85 F6 0F 84 ? ? ? ? 55 48 89 E5 41 57 41 56 41 55 41 54 53 "
-		"48 89 FB 48 81 EC ? ? ? ? 44 8B 77 48 45 85 F6";
 
 	inline DetachWeapon_t DetachWeapon()
 	{
+		const char* SIG_DetachWeapon = FleetGamedata::current().get("Plugins/SchemaEntity/DetachWeapon");
+		if (!*SIG_DetachWeapon) {
+			FleetGamedata::reportUnavailable("SchemaEntity/DetachWeapon");
+			return nullptr;
+		}
 		static DetachWeapon_t s_fn = nullptr;
 		static bool s_done = false;
 		if (s_done) return s_fn;

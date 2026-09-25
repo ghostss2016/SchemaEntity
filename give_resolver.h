@@ -15,6 +15,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdint>
+#include "common_gamedata.h"
 
 class CBasePlayerWeapon;
 
@@ -24,8 +25,6 @@ namespace CS2Give
 	typedef void (*EquipWeapon_t)(void* weaponServices, CBasePlayerWeapon* weapon);
 
 	// ---- Сигнатуры прологов (основной путь — авто-находят адрес на ЛЮБОМ билде, пока пролог цел). ----
-	static const char*     SIG_GiveNamedItem = "55 48 89 E5 41 57 41 56 41 55 41 54 53 48 81 EC ? ? ? ? 48 89 BD ? ? ? ? 89 95 ? ? ? ? 48 89 8D ? ? ? ? 44 89 85";
-	static const char*     SIG_EquipWeapon   = "55 48 89 E5 41 55 41 54 49 89 FC 53 48 89 F3 48 83 EC ? 48 8B 77";
 	// Сколько байт в начале функции затирает инлайн-детур — величина НЕ постоянная:
 	// сам переход занимает 5 байт (`e9` + смещение), но его добивают до границы команды.
 	// На живом сервере 04.08.2026 в памяти лежало `E9 DB CF 50 DD 90` — шесть байт.
@@ -123,6 +122,11 @@ namespace CS2Give
 	// Ни один путь не сошёлся → nullptr. Звать мусор нельзя: именно это роняло серверы.
 	inline GiveNamedItem_t GiveNamedItem()
 	{
+		const char* SIG_GiveNamedItem = FleetGamedata::current().get("Plugins/SchemaEntity/GiveNamedItem");
+		if (!*SIG_GiveNamedItem) {
+			FleetGamedata::reportUnavailable("SchemaEntity/GiveNamedItem");
+			return nullptr;
+		}
 		static GiveNamedItem_t s_fn = nullptr;
 		static bool s_done = false;
 		if (s_done) return s_fn;
@@ -144,6 +148,11 @@ namespace CS2Give
 	// Адрес EquipWeapon — так же поиском по прологу. Её не хукают, одного пути достаточно.
 	inline EquipWeapon_t EquipWeapon()
 	{
+		const char* SIG_EquipWeapon = FleetGamedata::current().get("Plugins/SchemaEntity/EquipWeapon");
+		if (!*SIG_EquipWeapon) {
+			FleetGamedata::reportUnavailable("SchemaEntity/EquipWeapon");
+			return nullptr;
+		}
 		static EquipWeapon_t s_fn = nullptr;
 		static bool s_done = false;
 		if (s_done) return s_fn;

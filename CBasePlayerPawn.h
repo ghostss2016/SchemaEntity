@@ -25,7 +25,7 @@ public:
 		// (пролог `push %rbp; lea …`). Прежнее значение 380 указывало на 0xb0ffa0 —
 		// середину чужой команды, то есть вызов уходил в никуда.
 		// Выведено якорем по консольным командам kill/explode: 0xc00/8 = 384.
-		CALL_VIRTUAL_RESOLVED(void, "CBasePlayerPawn::CommitSuicide", 384, this, bExplode, bForce);
+		CALL_VIRTUAL_RESOLVED(void, "CBasePlayerPawn::CommitSuicide", this, bExplode, bForce);
 	}
 
 	CBasePlayerController *GetController() { return m_hController.Get(); }

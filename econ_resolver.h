@@ -8,10 +8,14 @@
 class CAttributeList;
 namespace CS2Econ {
 using SetOrAddAttribute_t = void (*)(CAttributeList*, const char*, float);
-inline constexpr const char* SIG_SetOrAddAttribute =
-    "55 48 89 E5 41 57 41 56 49 89 FE 41 55 41 54 53 48 89 F3 48 83 EC ? F3 0F 11 85";
 
 inline SetOrAddAttribute_t ResolveSetOrAddAttribute(int* matches = nullptr) {
+    const char* SIG_SetOrAddAttribute = FleetGamedata::current().get("Plugins/SchemaEntity/SetOrAddAttribute");
+    if (!*SIG_SetOrAddAttribute) {
+        if (matches) *matches = 0;
+        FleetGamedata::reportUnavailable("SchemaEntity/SetOrAddAttribute");
+        return nullptr;
+    }
     int count = 0;
     const auto address = CS2Give::ProcMapsScan("libserver.so", SIG_SetOrAddAttribute, &count);
     if (matches) *matches = count;

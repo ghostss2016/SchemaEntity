@@ -234,7 +234,7 @@ public:
 
 	void DropWeapon(CBasePlayerWeapon* pWeapon, Vector* pVecTarget = nullptr, Vector* pVelocity = nullptr)
 	{
-		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_WeaponServices::DropWeapon", 24, this, pWeapon, pVecTarget, pVelocity);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_WeaponServices::DropWeapon", this, pWeapon, pVecTarget, pVelocity);
 	}
 };
 
@@ -276,7 +276,7 @@ public:
 
 	void RemoveWeapons()
     {
-		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_ItemServices::RemoveWeapons", 23, this);
+		CALL_VIRTUAL_RESOLVED(void, "CCSPlayer_ItemServices::RemoveWeapons", this);
     }
 };
 
