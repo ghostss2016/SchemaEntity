@@ -282,15 +282,33 @@ namespace vmt
 		return -1;
 	}
 
-	// Named runtime contracts keep engine-dependent indices in signatures.ini.
-	inline int ResolveSlotInTable(void **table, const char *key)
+	// Named engine contracts are already proven by engine-watch against the
+	// current libserver SHA.  Do not run the legacy fingerprint sidecar here:
+	// it is intentionally persistent and can map a valid new slot to a stale
+	// neighbour from an older engine build (for example 104 -> 102).  The
+	// shared gamedata value is the authoritative slot; only reject an invalid
+	// table entry before any caller dereferences it.
+	inline int ResolveSemanticSlotInTable(void **table, const char *key)
 	{
 		const int slot = FleetGamedata::current().integer(std::string("Plugins/SchemaEntity/VTables/") + key);
 		if (slot < 0 || slot > 1024) {
 			FleetGamedata::reportUnavailable(key);
 			return -1;
 		}
-		return ResolveSlotInTable(table, static_cast<uint32>(slot), key);
+		if (!table || !table[slot] || !IsExecutableAddress(table[slot])) {
+			FleetGamedata::reportUnavailable(key);
+			Warning("[vtable] %s: semantic slot %d is not executable; feature disabled\n", key, slot);
+			return -1;
+		}
+		return slot;
+	}
+
+	// Named runtime contracts keep engine-dependent indices in signatures.ini.
+	// The old overload remains source-compatible, but now uses the semantic
+	// path so stale vtable_fingerprints.txt can never rewrite a proven slot.
+	inline int ResolveSlotInTable(void **table, const char *key)
+	{
+		return ResolveSemanticSlotInTable(table, key);
 	}
 
 	/** Вызов с самонаведением. Ничего не делает, если слот не сошёлся. */
