@@ -320,7 +320,8 @@ namespace vmt
 			FleetGamedata::reportUnavailable(key);
 			return T();
 		}
-		const int idx = ResolveSlot(pClass, hint, key);
+		void **table = pClass ? *static_cast<void ***>(pClass) : nullptr;
+		const int idx = ResolveSemanticSlotInTable(table, key);
 		if (idx < 0) {
 			FleetGamedata::reportUnavailable(key);
 			return T();
