@@ -21,6 +21,12 @@ struct BoolEngine {
     virtual bool Ready(int value) { ++originals; return value>0; }
 };
 
+struct Config { int identity=7; };
+struct RefEngine {
+    const Config* originalConfig=nullptr;
+    virtual void Start(const Config& config) { originalConfig=&config; }
+};
+
 class Boundary final : public KHook::IKHook {
 public:
     struct Registration { void* context; void* removed; void* pre; void* post; };
@@ -86,6 +92,14 @@ public:
         current=nullptr;
         return overridden ? boolValue : result;
     }
+    void InvokeRef(RefEngine& engine,const Config& config) {
+        assert(hooks.size()==1);const auto entry=hooks.begin()->second;
+        current=entry.context;action=KHook::Action::Ignore;
+        reinterpret_cast<void(*)(RefEngine*,const Config&)>(entry.pre)(&engine,config);
+        if(action!=KHook::Action::Supersede)engine.Start(config);
+        reinterpret_cast<void(*)(RefEngine*,const Config&)>(entry.post)(&engine,config);
+        current=nullptr;
+    }
 };
 
 struct Consumer {
@@ -100,6 +114,13 @@ struct BoolConsumer {
     bool result=false;
     KHook::Return<bool> Pre(BoolEngine*,int) { ++pre; return {action,result}; }
     KHook::Return<bool> Post(BoolEngine*,int) { ++post; return {KHook::Action::Ignore,false}; }
+};
+
+struct RefConsumer {
+    const Config* before=nullptr;
+    const Config* after=nullptr;
+    KHook::Return<void> Pre(RefEngine*,const Config& config) { before=&config;return {KHook::Action::Ignore}; }
+    KHook::Return<void> Post(RefEngine*,const Config& config) { after=&config;return {KHook::Action::Ignore}; }
 };
 
 int main() {
@@ -145,6 +166,15 @@ int main() {
         assert(boundary.InvokeBool(other,1));assert(other.originals==1 && receiver.pre==3);
     }
     assert(boundary.hooks.empty() && boundary.removals==3);
+    {
+        RefEngine engine;RefConsumer receiver;Config config;
+        auto hook=std::make_unique<SvarogHooks::Virtual<RefEngine,void,const Config&>>(
+            &RefEngine::Start,&receiver,&RefConsumer::Pre,&RefConsumer::Post);
+        assert(hook->AddInstance(&engine));
+        boundary.InvokeRef(engine,config);
+        assert(receiver.before==&config && receiver.after==&config && engine.originalConfig==&config);
+    }
+    assert(boundary.hooks.empty() && boundary.removals==4);
     KHook::__exported__khook=nullptr;
     std::cout<<"MetaMod API18 typed hooks: all checks passed\n";
 }
