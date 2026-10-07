@@ -27,6 +27,15 @@ struct RefEngine {
     virtual void Start(const Config& config) { originalConfig=&config; }
 };
 
+struct MutableRefEngine {
+    Config* originalFirst=nullptr;
+    Config* originalSecond=nullptr;
+    virtual void Transmit(int amount, Config& first, Config& second) {
+        originalFirst=&first;originalSecond=&second;
+        first.identity+=amount;second.identity+=amount;
+    }
+};
+
 class Boundary final : public KHook::IKHook {
 public:
     struct Registration { void* context; void* removed; void* pre; void* post; };
@@ -100,6 +109,14 @@ public:
         reinterpret_cast<void(*)(RefEngine*,const Config&)>(entry.post)(&engine,config);
         current=nullptr;
     }
+    void InvokeMutableRefs(MutableRefEngine& engine,int amount,Config& first,Config& second) {
+        assert(hooks.size()==1);const auto entry=hooks.begin()->second;
+        current=entry.context;action=KHook::Action::Ignore;
+        reinterpret_cast<void(*)(MutableRefEngine*,int,Config&,Config&)>(entry.pre)(&engine,amount,first,second);
+        if(action!=KHook::Action::Supersede)engine.Transmit(amount,first,second);
+        reinterpret_cast<void(*)(MutableRefEngine*,int,Config&,Config&)>(entry.post)(&engine,amount,first,second);
+        current=nullptr;
+    }
 };
 
 struct Consumer {
@@ -121,6 +138,21 @@ struct RefConsumer {
     const Config* after=nullptr;
     KHook::Return<void> Pre(RefEngine*,const Config& config) { before=&config;return {KHook::Action::Ignore}; }
     KHook::Return<void> Post(RefEngine*,const Config& config) { after=&config;return {KHook::Action::Ignore}; }
+};
+
+struct MutableRefConsumer {
+    Config* beforeFirst=nullptr;Config* beforeSecond=nullptr;
+    Config* afterFirst=nullptr;Config* afterSecond=nullptr;
+    KHook::Return<void> Pre(MutableRefEngine*,int,Config& first,Config& second) {
+        beforeFirst=&first;beforeSecond=&second;first.identity=10;second.identity=20;
+        return {KHook::Action::Ignore};
+    }
+    KHook::Return<void> Post(MutableRefEngine*,int amount,Config& first,Config& second) {
+        afterFirst=&first;afterSecond=&second;
+        assert(first.identity==10+amount && second.identity==20+amount);
+        first.identity+=100;second.identity+=200;
+        return {KHook::Action::Ignore};
+    }
 };
 
 int main() {
@@ -175,6 +207,18 @@ int main() {
         assert(receiver.before==&config && receiver.after==&config && engine.originalConfig==&config);
     }
     assert(boundary.hooks.empty() && boundary.removals==4);
+    {
+        MutableRefEngine engine;MutableRefConsumer receiver;Config first,second;
+        auto hook=std::make_unique<SvarogHooks::Virtual<MutableRefEngine,void,int,Config&,Config&>>(
+            &MutableRefEngine::Transmit,&receiver,&MutableRefConsumer::Pre,&MutableRefConsumer::Post);
+        assert(hook->AddInstance(&engine));
+        boundary.InvokeMutableRefs(engine,3,first,second);
+        assert(receiver.beforeFirst==&first && receiver.beforeSecond==&second);
+        assert(receiver.afterFirst==&first && receiver.afterSecond==&second);
+        assert(engine.originalFirst==&first && engine.originalSecond==&second);
+        assert(first.identity==113 && second.identity==223);
+    }
+    assert(boundary.hooks.empty() && boundary.removals==5);
     KHook::__exported__khook=nullptr;
     std::cout<<"MetaMod API18 typed hooks: all checks passed\n";
 }
