@@ -59,7 +59,7 @@ inline bool Match(const uint8_t* bytes, const FleetGamedata::Pattern& pattern, s
     for (std::size_t i = 0; i < size; ++i) {
         const bool displacement = IsDisplacementByte(i, displacements);
         if (pattern.mask[i] != 'x' && (!displacement || pattern.mask[i] != '?')) return false;
-        if (!displacement && bytes[i] != static_cast<uint8_t>(pattern.bytes[i])) return false;
+        if (pattern.mask[i] == 'x' && bytes[i] != static_cast<uint8_t>(pattern.bytes[i])) return false;
     }
     return true;
 }

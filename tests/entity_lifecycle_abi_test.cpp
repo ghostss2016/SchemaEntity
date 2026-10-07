@@ -51,6 +51,8 @@ int main() {
     assert(!ValidateEntityHookAbi(add.data(),add.size(),remove.data(),remove.size(),{},removePattern));
     auto unsafePattern=addPattern;unsafePattern.mask[0]='?';
     assert(!ValidateEntityHookAbi(add.data(),add.size(),remove.data(),remove.size(),unsafePattern,removePattern));
+    auto fixedOperandPattern=addPattern;fixedOperandPattern.mask[0x24]='x';fixedOperandPattern.bytes[0x24]^=1;
+    assert(!ValidateEntityHookAbi(add.data(),add.size(),remove.data(),remove.size(),fixedOperandPattern,removePattern));
     for (std::size_t i = 0; i < add.size(); ++i) {
         if (entity_hook_detail::IsDisplacementByte(i,entity_hook_detail::kAddDisplacements)) continue;
         add[i] ^= 1; assert(!validate(add.data(),add.size(),remove.data(),remove.size())); add[i] ^= 1;
