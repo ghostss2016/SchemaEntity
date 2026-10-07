@@ -1,20 +1,23 @@
-// Derived without ABI changes from cs2-skybox/source/entity_hooks.h
-// at 249665151d770597fd96b81b95045ed82b38a2e1 (GPL-3.0).
-// Shared by observers; no caller may write the private listener vector.
+// Semantic decoder derived from cs2-skybox/source/entity_hooks.h at
+// 249665151d770597fd96b81b95045ed82b38a2e1 (GPL-3.0). Binding patterns and
+// virtual indices belong to shared signatures.ini, never binary fallbacks.
 #pragma once
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include "common_gamedata.h"
 
 namespace SvarogHooks {
 
 // Engine OnAdd/OnRemove receive the handle value in EDX. The SDK's
 // CEntityHandle has a non-trivial copy constructor and therefore passes via an
 // invisible reference under the C++ ABI. It MUST NOT appear in the hook ABI.
-inline constexpr int kEntityAddHookSlot = 16;
-inline constexpr int kEntityRemoveHookSlot = 17;
+inline constexpr const char* kEntityAddSlotKey = "Plugins/SchemaEntity/EntityLifecycle/OnAddSlot/linux";
+inline constexpr const char* kEntityRemoveSlotKey = "Plugins/SchemaEntity/EntityLifecycle/OnRemoveSlot/linux";
+inline constexpr const char* kEntityAddPatternKey = "Plugins/SchemaEntity/EntityLifecycle/OnAddAbi/linux";
+inline constexpr const char* kEntityRemovePatternKey = "Plugins/SchemaEntity/EntityLifecycle/OnRemoveAbi/linux";
 template<class Entity>
 using EntityLifecycleCallback = void (*)(Entity*, uint32_t);
 template<class Hook, class Entity>
@@ -34,43 +37,9 @@ inline constexpr std::size_t kEntityRemoveProofBytes = 0xb5;
 
 namespace entity_hook_detail {
 
-// libserver.so build ID 0f28e3d6ef09e99cade6a972a5e3efbff3131370:
-// RTTI CGameEntitySystem primary vtable slots 16/17, RVAs 0x16f6ba0 /
-// 0x16fc6d0. Match the actual instruction streams, not a generic byte search.
-// Only member displacements vary; control flow, reverse-vector iteration,
-// entity arguments, and callback virtual slots 0 / 0x10 must all match.
-inline constexpr std::array<uint8_t, kEntityAddProofBytes> kAddPattern{{
-    0x55, 0x48, 0x89, 0xe5, 0x41, 0x56, 0x49, 0x89, 0xfe, 0x41, 0x55, 0x41,
-    0x54, 0x49, 0x89, 0xf4, 0x53, 0x83, 0xfa, 0xff, 0x74, 0x62, 0x66, 0x81,
-    0xe2, 0xff, 0x7f, 0x66, 0x81, 0xfa, 0xff, 0x3f, 0x77, 0x56, 0x83, 0x87,
-    0x20, 0x21, 0x00, 0x00, 0x01, 0x48, 0x85, 0xf6, 0x74, 0x3e, 0x49, 0x63,
-    0x86, 0x50, 0x21, 0x00, 0x00, 0x89, 0xc2, 0x83, 0xea, 0x01, 0x78, 0x30,
-    0x48, 0x63, 0xda, 0x89, 0xd2, 0x48, 0x29, 0xd0, 0x48, 0xc1, 0xe3, 0x03,
-    0x4c, 0x8d, 0x2c, 0xc5, 0xf0, 0xff, 0xff, 0xff, 0x49, 0x8b, 0x86, 0x58,
-    0x21, 0x00, 0x00, 0x4c, 0x89, 0xe6, 0x48, 0x8b, 0x3c, 0x18, 0x48, 0x83,
-    0xeb, 0x08, 0x48, 0x8b, 0x07, 0xff, 0x10, 0x49, 0x39, 0xdd, 0x75, 0xe4,
-    0x5b, 0x41, 0x5c, 0x41, 0x5d, 0x41, 0x5e, 0x5d, 0xc3,
-}};
-
-inline constexpr std::array<uint8_t, kEntityRemoveProofBytes> kRemovePattern{{
-    0x55, 0x48, 0x89, 0xe5, 0x41, 0x56, 0x41, 0x55, 0x49, 0x89, 0xfd, 0x41,
-    0x54, 0x49, 0x89, 0xf4, 0x53, 0x83, 0xfa, 0xff, 0x74, 0x2a, 0x66, 0x81,
-    0xe2, 0xff, 0x7f, 0x66, 0x81, 0xfa, 0xff, 0x3f, 0x77, 0x1e, 0x83, 0xaf,
-    0x20, 0x21, 0x00, 0x00, 0x01, 0x49, 0x8b, 0x44, 0x24, 0x10, 0xf6, 0x40,
-    0x30, 0x04, 0x75, 0x3c, 0x5b, 0x41, 0x5c, 0x41, 0x5d, 0x41, 0x5e, 0x5d,
-    0xc3, 0x0f, 0x1f, 0x00, 0x4d, 0x85, 0xe4, 0x74, 0xe4, 0x49, 0x8b, 0x04,
-    0x24, 0x4c, 0x89, 0xe7, 0xff, 0x90, 0xd8, 0x00, 0x00, 0x00, 0xf6, 0xc4,
-    0x04, 0x74, 0xd2, 0x41, 0x83, 0xad, 0x24, 0x21, 0x00, 0x00, 0x01, 0x49,
-    0x8b, 0x44, 0x24, 0x10, 0xf6, 0x40, 0x30, 0x04, 0x74, 0xca, 0x66, 0x0f,
-    0x1f, 0x44, 0x00, 0x00, 0x49, 0x63, 0x85, 0x50, 0x21, 0x00, 0x00, 0x89,
-    0xc2, 0x83, 0xea, 0x01, 0x78, 0x37, 0x48, 0x63, 0xda, 0x89, 0xd2, 0x48,
-    0x29, 0xd0, 0x48, 0xc1, 0xe3, 0x03, 0x4c, 0x8d, 0x34, 0xc5, 0xf0, 0xff,
-    0xff, 0xff, 0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00, 0x49, 0x8b, 0x85, 0x58,
-    0x21, 0x00, 0x00, 0x4c, 0x89, 0xe6, 0x48, 0x8b, 0x3c, 0x18, 0x48, 0x83,
-    0xeb, 0x08, 0x48, 0x8b, 0x07, 0xff, 0x50, 0x10, 0x49, 0x39, 0xde, 0x75,
-    0xe3,
-}};
-
+// Operand positions describe the reviewed decoder format, NOT engine member
+// offsets or hook indices. Only these four-byte displacements may be masked;
+// every control-flow/opcode byte must be supplied and matched exactly.
 inline constexpr std::array<std::size_t, 3> kAddDisplacements{{0x24, 0x31, 0x53}};
 inline constexpr std::array<std::size_t, 4> kRemoveDisplacements{{0x24, 0x5a, 0x73, 0x9b}};
 
@@ -82,12 +51,16 @@ inline bool IsDisplacementByte(std::size_t i, const std::array<std::size_t, N>& 
     return false;
 }
 
-template<std::size_t N, std::size_t M>
-inline bool Match(const uint8_t* bytes, const std::array<uint8_t, N>& pattern,
+template<std::size_t M>
+inline bool Match(const uint8_t* bytes, const FleetGamedata::Pattern& pattern, std::size_t size,
                   const std::array<std::size_t, M>& displacements)
 {
-    for (std::size_t i = 0; i < N; ++i)
-        if (!IsDisplacementByte(i, displacements) && bytes[i] != pattern[i]) return false;
+    if (pattern.bytes.size() != size || pattern.mask.size() != size) return false;
+    for (std::size_t i = 0; i < size; ++i) {
+        const bool displacement = IsDisplacementByte(i, displacements);
+        if (pattern.mask[i] != 'x' && (!displacement || pattern.mask[i] != '?')) return false;
+        if (!displacement && bytes[i] != static_cast<uint8_t>(pattern.bytes[i])) return false;
+    }
     return true;
 }
 
@@ -101,14 +74,16 @@ inline uint32_t ReadU32(const uint8_t* bytes)
 
 inline bool ValidateEntityHookAbi(const uint8_t* onAdd, std::size_t addSize,
                                   const uint8_t* onRemove, std::size_t removeSize,
+                                  const FleetGamedata::Pattern& addPattern,
+                                  const FleetGamedata::Pattern& removePattern,
                                   EntityHookAbiProof* proof = nullptr)
 {
     if (proof) *proof = {};
     if (!onAdd || !onRemove || addSize < kEntityAddProofBytes ||
         removeSize < kEntityRemoveProofBytes) return false;
     using namespace entity_hook_detail;
-    if (!Match(onAdd, kAddPattern, kAddDisplacements) ||
-        !Match(onRemove, kRemovePattern, kRemoveDisplacements)) return false;
+    if (!Match(onAdd, addPattern, kEntityAddProofBytes, kAddDisplacements) ||
+        !Match(onRemove, removePattern, kEntityRemoveProofBytes, kRemoveDisplacements)) return false;
 
     const uint32_t count = ReadU32(onAdd + 0x31);
     const uint32_t networkCount = ReadU32(onAdd + 0x24);

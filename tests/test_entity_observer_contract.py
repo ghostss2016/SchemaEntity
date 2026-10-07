@@ -7,6 +7,15 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT/'entity_lifecycle_observer.h').read_text()
 
 class ObserverContract(unittest.TestCase):
+    def test_bindings_are_external_without_numeric_hook_fallbacks(self):
+        abi = (ROOT/'entity_lifecycle_abi.h').read_text()
+        self.assertNotIn('kAddPattern{{',abi)
+        self.assertNotIn('kRemovePattern{{',abi)
+        self.assertNotRegex(abi,r'HookSlot\s*=\s*\d+')
+        self.assertIn('gamedata.integer(kEntityAddSlotKey)',SOURCE)
+        self.assertIn('FleetGamedata::pattern(kEntityAddPatternKey)',SOURCE)
+        self.assertIn('addSlot < 0 || removeSlot < 0',SOURCE)
+        self.assertTrue((ROOT/'config/entity_lifecycle.gamedata.fragment.ini').is_file())
     def test_raw_handle_public_parent_and_shared_spawn(self):
         self.assertIn('Virtual<CEntitySystem, void, CEntityInstance*, std::uint32_t>',SOURCE)
         self.assertNotIn('Virtual<CEntitySystem, void, CEntityInstance*, CEntityHandle>',SOURCE)

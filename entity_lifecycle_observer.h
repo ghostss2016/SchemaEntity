@@ -90,22 +90,32 @@ public:
     bool Bind(CEntitySystem* system, IEntityListener* listener) {
         if (system && system == system_ && listener == listener_ && added_ && removed_ && parent_) return true;
         if (!Clear() || !system || !listener || !KHook::__exported__khook) return false;
+        const auto& gamedata = FleetGamedata::current();
+        const int addSlot = gamedata.integer(kEntityAddSlotKey);
+        const int removeSlot = gamedata.integer(kEntityRemoveSlotKey);
+        if (addSlot < 0 || removeSlot < 0 || addSlot == removeSlot || addSlot >= 256 || removeSlot >= 256) {
+            FleetGamedata::reportUnavailable("Plugins/SchemaEntity/EntityLifecycle/slots"); return false;
+        }
+        const auto& addPattern = FleetGamedata::pattern(kEntityAddPatternKey);
+        const auto& removePattern = FleetGamedata::pattern(kEntityRemovePatternKey);
+        if (addPattern.bytes.empty() || removePattern.bytes.empty()) return false;
         const EntityObserverMappings mappings;
         if (!mappings.Permit(system, sizeof(void*))) return false;
         auto** table = *reinterpret_cast<void***>(system);
-        if (!mappings.Permit(table, 20 * sizeof(void*), false, true)) return false;
+        const auto tableSize = static_cast<std::size_t>((addSlot > removeSlot ? addSlot : removeSlot) + 1) * sizeof(void*);
+        if (!mappings.Permit(table, tableSize, false, true)) return false;
         const auto original = [table](int slot) {
             void* address = KHook::__exported__khook->FindOriginalVirtual(table, slot);
             return static_cast<const std::uint8_t*>(address ? address : table[slot]);
         };
-        const auto* added = original(kEntityAddHookSlot);
-        const auto* removed = original(kEntityRemoveHookSlot);
+        const auto* added = original(addSlot);
+        const auto* removed = original(removeSlot);
         if (!mappings.Permit(added, kEntityAddProofBytes, true, true) ||
             !mappings.Permit(removed, kEntityRemoveProofBytes, true, true) ||
-            !ValidateEntityHookAbi(added, kEntityAddProofBytes, removed, kEntityRemoveProofBytes)) return false;
+            !ValidateEntityHookAbi(added, kEntityAddProofBytes, removed, kEntityRemoveProofBytes, addPattern, removePattern)) return false;
         system_ = system; listener_ = listener;
-        added_ = std::make_unique<RemoveHook>(kEntityAddHookSlot, this, nullptr, &EntityLifecycleObserver::Created);
-        removed_ = std::make_unique<RemoveHook>(kEntityRemoveHookSlot, this, &EntityLifecycleObserver::Removing, nullptr);
+        added_ = std::make_unique<RemoveHook>(addSlot, this, nullptr, &EntityLifecycleObserver::Created);
+        removed_ = std::make_unique<RemoveHook>(removeSlot, this, &EntityLifecycleObserver::Removing, nullptr);
         // PRE matches the native listener notification and sees a live entity.
         // Another native/POST listener may delete it; don't dereference it then.
         parent_ = std::make_unique<ParentHook>(&CEntitySystem::OnEntityParentChanged, this, &EntityLifecycleObserver::ParentChanged, nullptr);
