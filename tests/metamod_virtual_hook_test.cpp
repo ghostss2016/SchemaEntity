@@ -11,6 +11,14 @@
 #if METAMOD_PLAPI_VERSION >= 18
 namespace KHook { IKHook* __exported__khook = nullptr; }
 
+// SDK intentionally only forward-declares the configuration. A reference is
+// pointer-sized on the target ABI: never fabricate its object layout just to
+// make the upstream stack-size calculation compile.
+class OpaqueConfiguration;
+static_assert(KHook::Hook<void>::_copy_stack_size<void*,const OpaqueConfiguration&>() == 2*sizeof(void*));
+struct LargeConfiguration { char data[4096]; };
+static_assert(KHook::Hook<void>::_copy_stack_size<void*,LargeConfiguration&>() == 2*sizeof(void*));
+
 struct Engine {
     int originals = 0;
     virtual void Frame(bool) { ++originals; }
