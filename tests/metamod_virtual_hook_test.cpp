@@ -16,6 +16,11 @@ struct Engine {
     virtual void Frame(bool) { ++originals; }
 };
 
+struct BoolEngine {
+    int originals=0;
+    virtual bool Ready(int value) { ++originals; return value>0; }
+};
+
 class Boundary final : public KHook::IKHook {
 public:
     struct Registration { void* context; void* removed; void* pre; void* post; };
@@ -25,6 +30,7 @@ public:
     KHook::Action action = KHook::Action::Ignore;
     bool reject = false;
     unsigned setups = 0, removals = 0;
+    bool overridden=false, boolValue=false;
 
     KHook::HookID_t SetupHook(void*,void*,void*,void*,void*,void*,void*,unsigned,bool) override {
         assert(false); return KHook::INVALID_HOOK;
@@ -49,8 +55,11 @@ public:
     void* GetCurrentValuePtr(bool) override { assert(false); return nullptr; }
     void DestroyReturnValue() override {}
     void* DoRecall(KHook::Action,void*,std::size_t,void*,void*) override { assert(false); return nullptr; }
-    void SaveReturnValue(KHook::Action next,void*,std::size_t,void*,void*,bool) override {
-        if(next>action)action=next;
+    void SaveReturnValue(KHook::Action next,void* value,std::size_t size,void*,void*,bool) override {
+        if(next>action) {
+            action=next;
+            if(value) { assert(size==sizeof(bool)); overridden=true; boolValue=*static_cast<bool*>(value); }
+        }
     }
     void* FindOriginal(void*) override { assert(false); return nullptr; }
     void* FindOriginalVirtual(void**,int) override { assert(false); return nullptr; }
@@ -65,12 +74,32 @@ public:
         reinterpret_cast<void(*)(Engine*,bool)>(entry.post)(&engine,true);
         current=nullptr;
     }
+    bool InvokeBool(BoolEngine& engine,int value) {
+        assert(hooks.size()==1); const auto entry=hooks.begin()->second;
+        current=entry.context; action=KHook::Action::Ignore; overridden=false;
+        // The dummy returned by the real KHook trampoline is not the game's
+        // return value; it must nevertheless be initialized scalar storage.
+        assert(!reinterpret_cast<bool(*)(BoolEngine*,int)>(entry.pre)(&engine,value));
+        bool result=false;
+        if(action!=KHook::Action::Supersede)result=engine.Ready(value);
+        assert(!reinterpret_cast<bool(*)(BoolEngine*,int)>(entry.post)(&engine,value));
+        current=nullptr;
+        return overridden ? boolValue : result;
+    }
 };
 
 struct Consumer {
     int pre=0,post=0; bool block=false;
     KHook::Return<void> Pre(Engine*,bool) { ++pre; return {block?KHook::Action::Supersede:KHook::Action::Ignore}; }
     KHook::Return<void> Post(Engine*,bool) { ++post; return {KHook::Action::Ignore}; }
+};
+
+struct BoolConsumer {
+    int pre=0,post=0;
+    KHook::Action action=KHook::Action::Ignore;
+    bool result=false;
+    KHook::Return<bool> Pre(BoolEngine*,int) { ++pre; return {action,result}; }
+    KHook::Return<bool> Post(BoolEngine*,int) { ++post; return {KHook::Action::Ignore,false}; }
 };
 
 int main() {
@@ -103,6 +132,19 @@ int main() {
         assert(!hook->AddVtable(*reinterpret_cast<void***>(&first))); assert(!hook->IsActive());
     }
     assert(boundary.hooks.empty() && boundary.removals==2);
+    {
+        boundary.reject=false; BoolEngine engine,other; BoolConsumer receiver;
+        auto hook=std::make_unique<SvarogHooks::Virtual<BoolEngine,bool,int>>(
+            &BoolEngine::Ready,&receiver,&BoolConsumer::Pre,&BoolConsumer::Post);
+        assert(hook->AddInstance(&engine));
+        assert(boundary.InvokeBool(engine,1));assert(receiver.pre==1 && receiver.post==1 && engine.originals==1);
+        receiver.action=KHook::Action::Override;
+        assert(!boundary.InvokeBool(engine,1));assert(engine.originals==2);
+        receiver.action=KHook::Action::Supersede;receiver.result=true;
+        assert(boundary.InvokeBool(engine,-1));assert(engine.originals==2 && receiver.post==3);
+        assert(boundary.InvokeBool(other,1));assert(other.originals==1 && receiver.pre==3);
+    }
+    assert(boundary.hooks.empty() && boundary.removals==3);
     KHook::__exported__khook=nullptr;
     std::cout<<"MetaMod API18 typed hooks: all checks passed\n";
 }

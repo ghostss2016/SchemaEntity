@@ -4,6 +4,8 @@
 
 #if METAMOD_PLAPI_VERSION >= 18
 #include <mutex>
+#include <type_traits>
+#include <utility>
 
 namespace SvarogHooks {
 
@@ -23,7 +25,14 @@ class Virtual final : public KHook::Virtual<Class, Result, Args...> {
     }
 
 public:
-    using Base::Base;
+    template<class... Constructor>
+    explicit Virtual(Constructor&&... constructor) : Base(std::forward<Constructor>(constructor)...) {
+        // Pinned KHook returns this dummy from PRE/POST trampolines even for an
+        // Ignore action. Its `new Result` leaves scalar storage indeterminate;
+        // initialize it without changing the real original/override value.
+        if constexpr (std::is_scalar_v<Result> && !std::is_const_v<Result>)
+            *this->_fake_return = Result{};
+    }
 
     // A returned true confirms KHook accepted a registration, not that a
     // deferred detour has run or that gameplay has been tested.
