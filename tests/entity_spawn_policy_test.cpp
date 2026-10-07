@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 
 struct Entity { unsigned value; };
 struct Handle { std::uint32_t raw; bool IsValid() const { return raw != UINT32_MAX; } };
