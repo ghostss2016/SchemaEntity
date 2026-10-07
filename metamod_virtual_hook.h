@@ -9,6 +9,16 @@
 
 namespace SvarogHooks {
 
+// Keep a parameter rewrite in the current KHook chain. The caller supplies
+// KHook::Recall; never invoke an engine virtual directly and then Ignore it,
+// which would run the original twice. Portable tests verify the branch count;
+// the actual ABI is compiled against the pinned KHook header in central CI.
+template<class Ignore,class Recall>
+auto DispatchParamRewrite(bool rewrite,Ignore&& ignore,Recall&& recall) -> decltype(ignore()) {
+    if(rewrite)return recall();
+    return ignore();
+}
+
 // The engine ABI and detour implementation remain owned by the pinned MetaMod
 // KHook. This extension only adds typed, checked registration for objects and
 // raw vtables (the equivalent of the former global DVP hook). No fake entity,

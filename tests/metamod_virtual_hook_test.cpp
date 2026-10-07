@@ -164,6 +164,15 @@ struct MutableRefConsumer {
 };
 
 int main() {
+    for(int cycle=0;cycle<10000;++cycle){
+        int continues=0,recalls=0;
+        auto ignore=[&]{++continues;return KHook::Return<bool>{KHook::Action::Ignore,false};};
+        auto recall=[&]{++recalls;return KHook::Return<bool>{KHook::Action::Ignore,true};};
+        assert(!SvarogHooks::DispatchParamRewrite(false,ignore,recall).ret);
+        assert(continues==1 && recalls==0);
+        assert(SvarogHooks::DispatchParamRewrite(true,ignore,recall).ret);
+        assert(continues==1 && recalls==1);
+    }
     Boundary boundary; KHook::__exported__khook=&boundary;
     Engine first,second; Consumer consumer;
     using Hook=SvarogHooks::Virtual<Engine,void,bool>;
