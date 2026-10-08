@@ -1,6 +1,8 @@
 // Central cs2-ci/.100 only. Production vmt code and pinned KHook interface;
 // the fake boundary owns only hook registry entries and the engine fixture.
 #define META_NO_HL2SDK
+// Source 2 ISmmAPI still needs the complete player-slot type in no-SDK mode.
+#include <playerslot.h>
 #include <ISmmPlugin.h>
 #include "../virtual.h"
 #include <cassert>
