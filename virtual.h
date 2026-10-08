@@ -26,6 +26,10 @@
 #include <vector>
 #include <utility>
 
+#if defined(METAMOD_PLAPI_VERSION) && METAMOD_PLAPI_VERSION >= 18
+#include <khook.hpp>
+#endif
+
 #define CALL_VIRTUAL(retType, idx, ...) \
 	vmt::CallVirtual<retType>(idx, __VA_ARGS__)
 
@@ -42,8 +46,9 @@ namespace vmt
 	 *
 	 * Полностью это лечится только поиском функции по байтам, но такая проверка
 	 * превращает тихое падение в громкий отказ: адрес обязан быть кодом, а не
-	 * данными и не мусором. Карту читаем один раз — после загрузки она не меняется,
-	 * а вызовы идут каждый кадр.
+	 * данными и не мусором. Кэш карты описывает уже загруженный код; новые
+	 * KHook-переходники проверяются отдельно через реестр владельца слота,
+	 * без чтения /proc/self/maps в игровом пути.
 	 */
 	inline bool IsExecutableAddress(const void *p)
 	{
@@ -73,6 +78,25 @@ namespace vmt
 		return false;
 	}
 
+
+	// API18 creates executable trampolines after the initial maps snapshot.
+	// A cache miss is accepted only for an active virtual hook whose registry
+	// supplies a different, previously validated original. Keep calling the
+	// current trampoline: calling original here would bypass plugin callbacks.
+	inline bool IsCallableVirtual(void** table, uint32 index, const void* target)
+	{
+		if (!table || !target) return false;
+		if (IsExecutableAddress(target)) return true;
+#if defined(METAMOD_PLAPI_VERSION) && METAMOD_PLAPI_VERSION >= 18
+		if (!KHook::__exported__khook) return false;
+		const void* original = KHook::__exported__khook->FindOriginalVirtual(table, index);
+		return original && original != target && table[index] == target
+			&& IsExecutableAddress(original);
+#else
+		return false;
+#endif
+	}
+
 	template <typename T = void *>
 	inline T GetVMethod(uint32 uIndex, void *pClass)
 	{
@@ -90,7 +114,7 @@ namespace vmt
 		}
 
 		void *pTarget = pVTable[uIndex];
-		if (!pTarget || !IsExecutableAddress(pTarget))
+		if (!IsCallableVirtual(pVTable, uIndex, pTarget))
 		{
 			// Номер слота устарел после обновления движка. Молчать нельзя: без этого
 			// сообщения остаётся только дамп с адресом посреди чужой функции.

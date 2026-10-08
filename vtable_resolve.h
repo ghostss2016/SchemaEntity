@@ -295,7 +295,7 @@ namespace vmt
 			FleetGamedata::reportUnavailable(key);
 			return -1;
 		}
-		if (!table || !table[slot] || !IsExecutableAddress(table[slot])) {
+		if (!table || !IsCallableVirtual(table, slot, table[slot])) {
 			FleetGamedata::reportUnavailable(key);
 			Warning("[vtable] %s: semantic slot %d is not executable; feature disabled\n", key, slot);
 			return -1;
